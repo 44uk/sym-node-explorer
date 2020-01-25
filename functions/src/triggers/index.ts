@@ -15,32 +15,47 @@ interface INodeInfo {
 }
 
 interface IPeer extends INodeInfo {
-  _unreachable: boolean
-  _reachedAt: firestore.Timestamp
+  _reachable: boolean
+  _foundAt: firestore.Timestamp
 }
 
 const peerCollection = db.collection(Path.peers)
 
-const fetchAndSavePeers = (peerURL: URL) => {
+const fetchAndSavePeers = (url: URL, identifier: string) => {
   return cli<INodeInfo[]>({
-    url: peerURL.href,
+    url: url.href,
     parse: "json",
     timeout: 2500
   })
     .then(resp => resp.body)
-    .then(peers => peers.forEach(p => peerCollection.doc(p.publicKey).set({
-      _reachedAt: admin.firestore.FieldValue.serverTimestamp(),
-      _unreachable: false,
-      ...p
-    }, {
-      merge: true
-    })))
+    .then(body => {
+      console.debug("Found %d Peers.", body.length)
+      return body
+    })
+    .then(peers => peers.map(p => peerCollection.doc(p.publicKey)
+      .set({
+        ...p,
+        _foundAt: admin.firestore.FieldValue.serverTimestamp(),
+        _gateway: p.roles === 3 ? `http://${p.host}:3000/node/info` : "",
+      }, {
+        merge: true
+      }))
+    )
+    .then(result => {
+      peerCollection.doc(identifier).set({
+        _reachable: true,
+      }, {
+        merge: true
+      })
+        .catch(e => console.debug(e))
+      return result
+    })
 }
 
 export const discoverNewPeers = () => {
+  console.debug("Run discoverNewPeers")
   return peerCollection
     .where("roles", "==", 3)
-    .where("_unreachable", "==", false)
     .get()
     .then(querySnap => querySnap.docs.map(doc => doc.data() as IPeer))
     .then(peers => peers
@@ -49,11 +64,11 @@ export const discoverNewPeers = () => {
         catch(error) { return null }
       })
       .filter((v): v is { peer: IPeer, url: URL } => v !== null)
-      .forEach(({ peer, url }) => fetchAndSavePeers(url)
+      .map(({ peer, url }) => fetchAndSavePeers(url, peer.publicKey)
         .catch(error => {
           console.debug("pubKey: %s, host: %s is unreachable.", peer.publicKey.slice(0,8), peer.host)
-          peerCollection.doc(peer.publicKey).set({
-            _unreachable: true
+          return peerCollection.doc(peer.publicKey).set({
+            _reachable: false
           }, {
             merge: true
           })
@@ -61,15 +76,18 @@ export const discoverNewPeers = () => {
         })
       )
     )
+    .then(result => result.length)
 }
 
 export const cleanGonePeers = (hours = 24) => {
+  console.debug("Run cleanGonePeers")
   const batch = db.batch()
   return peerCollection
-    .orderBy("_reachedAt")
+    .orderBy("_foundAt")
     .endAt(new Date(Date.now() - ms(`${hours} hours`)))
     .get()
     .then(querySnap => querySnap.docs.forEach(d => batch.delete(d.ref)))
     .then(_ => batch.commit())
+    .then(result => result.length)
 }
 
