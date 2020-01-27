@@ -1,8 +1,14 @@
-import ms from "ms"
 import { firestore } from "firebase-admin"
+
+import ms from "ms"
+import * as geoIP from "geoip-lite"
+import * as DNS from "dns"
+import { promisify } from "util"
+
+import { Path } from "../constants"
 import { httpClient as cli } from "../lib/http-client"
 import { admin, db } from "../lib/firebase"
-import { Path } from "../constants"
+import { delay } from "../lib/util"
 
 interface INodeInfo {
   version: number,
@@ -29,7 +35,8 @@ const fetchAndSavePeers = (url: URL, identifier: string) => {
   })
     .then(resp => resp.body)
     .then(body => {
-      console.debug("Found %d Peers.", body.length)
+      if(Number.isNaN(body.length)) { throw new Error("ServiceUnavailable"); }
+      console.debug("Found %d Peers. (%s)", body.length, url.href)
       return body
     })
     .then(peers => peers.map(p => peerCollection.doc(p.publicKey)
@@ -41,15 +48,6 @@ const fetchAndSavePeers = (url: URL, identifier: string) => {
         merge: true
       }))
     )
-    .then(result => {
-      peerCollection.doc(identifier).set({
-        _reachable: true,
-      }, {
-        merge: true
-      })
-        .catch(e => console.debug(e))
-      return result
-    })
 }
 
 export const discoverNewPeers = () => {
@@ -64,14 +62,15 @@ export const discoverNewPeers = () => {
         catch(error) { return null }
       })
       .filter((v): v is { peer: IPeer, url: URL } => v !== null)
-      .map(({ peer, url }) => fetchAndSavePeers(url, peer.publicKey)
+      .map(({ peer, url }) => delay((Math.random() * 10) * 2000)
+        .then(() => fetchAndSavePeers(url, peer.publicKey))
+        .then(result => {
+          console.debug("Peers: %d, host: %s", result.length, url.href)
+          return peerCollection.doc(peer.publicKey).set({ _reachable: true }, { merge: true })
+        })
         .catch(error => {
-          console.debug("pubKey: %s, host: %s is unreachable.", peer.publicKey.slice(0,8), peer.host)
-          return peerCollection.doc(peer.publicKey).set({
-            _reachable: false
-          }, {
-            merge: true
-          })
+          console.debug("PubKey: %s, host: %s is unreachable. %s", peer.publicKey.slice(0,8), url.href, error.message)
+          return peerCollection.doc(peer.publicKey).set({ _reachable: false }, { merge: true })
             .catch(e => console.debug(e))
         })
       )
@@ -91,3 +90,13 @@ export const cleanGonePeers = (hours = 24) => {
     .then(result => result.length)
 }
 
+// export const lookupCountry = (host: string) => {
+//   const lookup = geoIP.lookup("35.158.49.202")
+//   console.debug(lookup)
+//   return promisify(DNS.lookup)("cat-testnet.44uk.net")
+//     .then(lookupAddr => {
+//       const result = geoIP.lookup(lookupAddr.address)
+//       console.debug(result)
+//       return result
+//     })
+// }
