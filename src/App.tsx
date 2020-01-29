@@ -67,6 +67,7 @@ const App: React.FC = () => {
         || peer.host.startsWith(keyword)
       ))
   ), [peers, role, keyword])
+
   const count = useMemo(() => {
     return displayedPeers.reduce((accum, value) => {
       switch (value.roles) {
@@ -83,8 +84,6 @@ const App: React.FC = () => {
       [Role.dual]: 0
     })
   }, [displayedPeers])
-  // const displayedPeers = peers
-  //   .filter(doc => role === Role.both ? true : doc.roles === role)
 
   return (<>
     <Header />

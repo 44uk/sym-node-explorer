@@ -28,15 +28,16 @@ interface IPeer extends INodeInfo {
 const peerCollection = db.collection(Path.peers)
 
 const fetchAndSavePeers = (url: URL, identifier: string) => {
+  console.debug("Peers: %s Requested", url.href)
   return cli<INodeInfo[]>({
     url: url.href,
     parse: "json",
-    timeout: 2500
+    timeout: 1500
   })
     .then(resp => resp.body)
     .then(body => {
       if(Number.isNaN(body.length)) { throw new Error("ServiceUnavailable"); }
-      console.debug("Found %d Peers. (%s)", body.length, url.href)
+      console.debug("Peers: %s Found %d", url.href, body.length)
       return body
     })
     .then(peers => peers.map(p => peerCollection.doc(p.publicKey)
@@ -55,24 +56,26 @@ export const discoverNewPeers = () => {
   return peerCollection
     .where("roles", "==", 3)
     .get()
-    .then(querySnap => querySnap.docs.map(doc => doc.data() as IPeer))
+    .then(qSnap => qSnap.docs.map(doc => doc.data() as IPeer))
     .then(peers => peers
       .map(peer => {
         try { return { peer, url: new URL("/node/peers", `http://${peer.host}:3000`) } }
         catch(error) { return null }
       })
       .filter((v): v is { peer: IPeer, url: URL } => v !== null)
-      .map(({ peer, url }) => delay((Math.random() * 10) * 2000)
-        .then(() => fetchAndSavePeers(url, peer.publicKey))
-        .then(result => {
-          console.debug("Peers: %d, host: %s", result.length, url.href)
-          return peerCollection.doc(peer.publicKey).set({ _reachable: true }, { merge: true })
-        })
-        .catch(error => {
-          console.debug("PubKey: %s, host: %s is unreachable. %s", peer.publicKey.slice(0,8), url.href, error.message)
-          return peerCollection.doc(peer.publicKey).set({ _reachable: false }, { merge: true })
-            .catch(e => console.debug(e))
-        })
+      .map(({ peer, url }, idx) => (
+        delay(idx * 2500)
+          .then(() => fetchAndSavePeers(url, peer.publicKey))
+          .then(result => {
+            console.debug("PubKey: %s, host: %s is reachable.", peer.publicKey.slice(0,8), url.href)
+            return peerCollection.doc(peer.publicKey).set({ _reachable: true }, { merge: true })
+          })
+          .catch(error => {
+            console.debug("PubKey: %s, host: %s is unreachable. %s", peer.publicKey.slice(0,8), url.href, error.message)
+            return peerCollection.doc(peer.publicKey).set({ _reachable: false }, { merge: true })
+            //   .catch(e => console.debug(e))
+          })
+        )
       )
     )
     .then(result => result.length)
