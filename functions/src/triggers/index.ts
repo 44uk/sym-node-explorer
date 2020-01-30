@@ -28,7 +28,7 @@ interface IPeer extends INodeInfo {
 const peerCollection = db.collection(Path.peers)
 
 const fetchAndSavePeers = (url: URL, identifier: string) => {
-  console.debug("Peers: %s Requested", url.href)
+  console.debug("Peer: %s Requested", url.href)
   return cli<INodeInfo[]>({
     url: url.href,
     parse: "json",
@@ -37,7 +37,7 @@ const fetchAndSavePeers = (url: URL, identifier: string) => {
     .then(resp => resp.body)
     .then(body => {
       if(Number.isNaN(body.length)) { throw new Error("ServiceUnavailable"); }
-      console.debug("Peers: %s Found %d", url.href, body.length)
+      console.debug("Peer: %s Found %d peers", url.href, body.length)
       return body
     })
     .then(peers => peers.map(p => peerCollection.doc(p.publicKey)
@@ -64,7 +64,8 @@ export const discoverNewPeers = () => {
       })
       .filter((v): v is { peer: IPeer, url: URL } => v !== null)
       .map(({ peer, url }, idx) => (
-        delay(idx * 2500)
+        delay(idx * 1000 * 2.5)
+          // .then(delayed => console.debug("PubKey: %s, delayed fetchAndSave()", delayed))
           .then(() => fetchAndSavePeers(url, peer.publicKey))
           .then(result => {
             console.debug("PubKey: %s, host: %s is reachable.", peer.publicKey.slice(0,8), url.href)
@@ -93,13 +94,30 @@ export const cleanGonePeers = (hours = 24) => {
     .then(result => result.length)
 }
 
-// export const lookupCountry = (host: string) => {
-//   const lookup = geoIP.lookup("35.158.49.202")
-//   console.debug(lookup)
-//   return promisify(DNS.lookup)("cat-testnet.44uk.net")
-//     .then(lookupAddr => {
-//       const result = geoIP.lookup(lookupAddr.address)
-//       console.debug(result)
-//       return result
-//     })
-// }
+export const lookupPeerGIOs = () => {
+  return peerCollection
+    .where("_reachable", "==", true)
+    .get()
+    .then(qSnap => qSnap.docs.map(doc => doc.data() as IPeer))
+    .then(peers => peers.map(peer => {
+        lookupCountry(peer.host)
+          .then(lookup => {
+            return peerCollection.doc(peer.publicKey).set({ _country: lookup.country }, { merge: true })
+          })
+      })
+    )
+}
+
+const lookupCountry = (host: string) => {
+  const isIPAddr = /^(([1-9]?[0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])[.]){3}([1-9]?[0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$/.test(host)
+  if (isIPAddr) {
+    const result = geoIP.lookup(host)
+    return Promise.resolve(result)
+  } else {
+    return promisify(DNS.lookup)(host)
+      .then(lookupAddr => {
+        const result = geoIP.lookup(lookupAddr.address)
+        return result
+      })
+  }
+}
