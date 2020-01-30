@@ -13,6 +13,7 @@ export interface IPeer {
   _gateway: string
   _reachedAt: firestore.Timestamp
   _reachable: boolean
+  _country: string
 }
 
 export const usePeers = () => {

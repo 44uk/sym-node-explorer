@@ -1,7 +1,6 @@
 import React from "react"
 import ReactDOM from "react-dom"
 import App from "./App"
-// import "mini.css"
 import "ress"
 import "./index.css"
 import * as serviceWorker from "./serviceWorker"

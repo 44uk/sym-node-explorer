@@ -27,6 +27,10 @@ const Peer = (peer: IPeer) => (<div className="card fluid">
       <dd>{RoleLabel[peer.roles as Role]}({peer.roles})</dd>
       <dt>Version</dt>
       <dd>{peer.version}</dd>
+      { peer._country && <>
+      <dt>Country</dt>
+      <dd>{peer._country}</dd>
+      </>}
     </dl>
     { peer._reachable &&
       <a className="peer-gateway" href={peer._gateway} target="_blank" rel="noopener noreferrer">{peer._gateway}</a>
