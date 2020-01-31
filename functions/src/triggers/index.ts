@@ -96,7 +96,7 @@ export const cleanGonePeers = (hours = 24) => {
 
 export const lookupPeerGIOs = () => {
   return peerCollection
-    .where("_reachable", "==", true)
+    // .where("_reachable", "==", true)
     .get()
     .then(qSnap => qSnap.docs.map(doc => doc.data() as IPeer))
     .then(peers => peers
