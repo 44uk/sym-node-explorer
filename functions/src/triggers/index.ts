@@ -99,13 +99,21 @@ export const lookupPeerGIOs = () => {
     .where("_reachable", "==", true)
     .get()
     .then(qSnap => qSnap.docs.map(doc => doc.data() as IPeer))
-    .then(peers => peers.map(peer => {
-        lookupCountry(peer.host)
+    .then(peers => peers
+      .map((peer, idx) => (
+        delay(idx * 1000 * 2.5)
+          .then(() => lookupCountry(peer.host))
           .then(lookup => {
+            console.debug("PubKey: %s, host: %s is located in %s - %s.", peer.publicKey.slice(0,8), peer.host, lookup.city || "_UNKNOWN_", lookup.country)
             return peerCollection.doc(peer.publicKey).set({ _country: lookup.country }, { merge: true })
           })
-      })
+          .catch(error => {
+            console.debug("PubKey: %s, host: %s is unreachable. %s", peer.publicKey.slice(0,8), peer.host, error.message)
+            return peerCollection.doc(peer.publicKey).set({ _reachable: false }, { merge: true })
+          })
+      ))
     )
+    .then(result => result.length)
 }
 
 const lookupCountry = (host: string) => {

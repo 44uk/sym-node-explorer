@@ -16,7 +16,7 @@
   "dependencies": {
     "@types/geoip-lite": "^1.1.29",
     "@types/ms": "^0.7.31",
-    "@types/node": "^13.5.1",
+    "@types/node": "^13.5.3",
     "@types/phin": "^3.4.0",
     "firebase-admin": "^8.9.2",
     "firebase-functions": "^3.3.0",
