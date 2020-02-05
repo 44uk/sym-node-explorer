@@ -39,11 +39,11 @@ const Peer = (peer: IPeer) => (
 )
 
 const Header = () => (<header>
-  <a href="/" className="logo">NEM2 Node Explorer</a>
+  <a href="/" className="logo">SYM Node Explorer</a>
 </header>)
 
 const Footer = () => (<footer>
-  <p>NEM2 Node Explorer</p>
+  <p>SYM Node Explorer</p>
 </footer>)
 
 interface ILocationMap {

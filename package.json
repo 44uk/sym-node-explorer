@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "nem2-node-explorer",
+  "name": "sym-node-explorer",
   "version": "1.0.0",
   "dependencies": {
     "@testing-library/jest-dom": "^5.1.1",

@@ -5,26 +5,12 @@ import {
   lookupPeerGIOs
 } from "./triggers"
 
-const REGION = "asia-northeast1"
-
-// export interface IPeer {
-//   version: number,
-//   publicKey: string
-//   roles: number
-//   port: number
-//   networkIdentifier: number
-//   host: string
-//   friendlyName: string
-//   _gateway: string
-//   _reachedAt: firestore.Timestamp
-//   _reachable: boolean
-// }
-
-// export const requestDiscovering = functions.region(REGION).https.onRequest((_req, resp) => {
-//   discoverNewPeers()
-//     .then(result => resp.json({ message: `Discovered ${result} peers` }))
-//     .catch(error => console.debug(error))
-// })
+// export const requestDiscovering = functions
+//   .https.onRequest((_req, resp) => {
+//     discoverNewPeers()
+//       .then(result => resp.json({ message: `Discovered ${result} peers` }))
+//       .catch(error => console.debug(error))
+//   })
 //
 // export const requestCleaning = functions.region(REGION).https.onRequest((_req, resp) => {
 //   cleanGonePeers()
@@ -33,7 +19,6 @@ const REGION = "asia-northeast1"
 // })
 
 export const discovering = functions
-//  .region(REGION)
   .runWith({ timeoutSeconds: 60 * 5 })
   .pubsub.schedule('every 70 minutes')
   .timeZone('Asia/Tokyo')
@@ -43,7 +28,6 @@ export const discovering = functions
   })
 
 export const lookuping = functions
-//  .region(REGION)
   .runWith({ timeoutSeconds: 60 * 5 })
   .pubsub.schedule('every 80 minutes')
   .timeZone('Asia/Tokyo')
@@ -54,7 +38,6 @@ export const lookuping = functions
   })
 
 export const cleaning = functions
-//  .region(REGION)
   .runWith({ timeoutSeconds: 60 * 5 })
   .pubsub.schedule('every 12 hours')
   .timeZone('Asia/Tokyo')
