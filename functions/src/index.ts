@@ -34,7 +34,7 @@ const REGION = "asia-northeast1"
 
 export const discovering = functions
 //  .region(REGION)
-  .runWith({ timeoutSeconds: 60 * 3 })
+  .runWith({ timeoutSeconds: 60 * 5 })
   .pubsub.schedule('every 70 minutes')
   .timeZone('Asia/Tokyo')
   .onRun(async () => {
@@ -44,7 +44,7 @@ export const discovering = functions
 
 export const lookuping = functions
 //  .region(REGION)
-  .runWith({ timeoutSeconds: 60 * 3 })
+  .runWith({ timeoutSeconds: 60 * 5 })
   .pubsub.schedule('every 80 minutes')
   .timeZone('Asia/Tokyo')
   .onRun(async () => {
@@ -55,7 +55,7 @@ export const lookuping = functions
 
 export const cleaning = functions
 //  .region(REGION)
-  .runWith({ timeoutSeconds: 60 * 3 })
+  .runWith({ timeoutSeconds: 60 * 5 })
   .pubsub.schedule('every 12 hours')
   .timeZone('Asia/Tokyo')
   .onRun(async () => {
